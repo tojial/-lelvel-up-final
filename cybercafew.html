@@ -518,9 +518,64 @@
       .station-card__img { max-height: 110px; }
       .footer { padding: 8px 15px; }
     }
+
+    /* ================= LOGIN LEVELUP ================= */
+    .login-screen {
+      position: fixed; inset: 0; z-index: 99999; display: flex;
+      align-items: center; justify-content: center; padding: 20px;
+      background: radial-gradient(circle at 50% 35%, rgba(91,35,145,.28), transparent 42%),
+                  linear-gradient(135deg, rgba(5,6,18,.98), rgba(10,13,34,.99));
+      backdrop-filter: blur(12px);
+    }
+    .login-card {
+      width: min(100%, 420px); padding: 34px 30px; border-radius: 20px;
+      background: rgba(15,18,38,.97); border: 1px solid rgba(178,58,255,.55);
+      box-shadow: 0 0 45px rgba(178,58,255,.2), 0 20px 70px rgba(0,0,0,.55);
+      text-align: center;
+    }
+    .login-logo { font-family: var(--font-title); font-size: 30px; font-weight: 900;
+      letter-spacing: 2px; color: #fff; text-shadow: 0 0 16px var(--neon-purple); }
+    .login-logo span { color: var(--neon-purple); }
+    .login-subtitle { color: var(--text-muted); margin: 9px 0 26px; font-size: 16px; }
+    .login-field { text-align: left; margin: 15px 0; }
+    .login-field label { display:block; color:#c9cce5; margin-bottom:7px; font-weight:700; }
+    .login-field input { width:100%; padding:13px 14px; border-radius:10px;
+      border:1px solid var(--border-color); background:#090c1d; color:#fff; font: inherit; font-size:17px; }
+    .login-submit { width:100%; margin-top:12px; padding:14px; border:0; border-radius:10px;
+      background:linear-gradient(90deg,#8b2be2,#b23aff); color:#fff; font-family:var(--font-title);
+      font-weight:800; cursor:pointer; box-shadow:0 0 20px rgba(178,58,255,.25); }
+    .login-submit:hover { filter:brightness(1.12); }
+    .login-error { min-height:20px; margin-top:12px; color:#ff6688; font-weight:700; }
+    .login-demo { margin-top:16px; padding:10px; border-radius:9px; background:rgba(0,210,255,.07);
+      color:#9deeff; font-size:13px; }
+    .logout-button { position:fixed; right:18px; bottom:18px; z-index:9000; border:1px solid var(--neon-purple);
+      background:#17112b; color:#fff; border-radius:9px; padding:10px 14px; cursor:pointer;
+      font-family:var(--font-body); font-weight:700; box-shadow:0 0 15px rgba(178,58,255,.2); }
+    @media(max-width:480px) { .login-card { padding:28px 20px; } .login-logo {font-size:25px;} }
+
   </style>
 </head>
 <body>
+
+  <!-- PANTALLA DE INICIO DE SESIÓN -->
+  <section class="login-screen" id="loginScreen" aria-label="Inicio de sesión">
+    <form class="login-card" id="loginForm">
+      <div class="login-logo">LEVEL<span>UP</span></div>
+      <p class="login-subtitle">Arcade Bar · Acceso de usuarios</p>
+      <div class="login-field">
+        <label for="loginUser"><i class="fa-solid fa-user"></i> Usuario</label>
+        <input id="loginUser" type="text" placeholder="Ingresa tu usuario" autocomplete="username" required>
+      </div>
+      <div class="login-field">
+        <label for="loginPassword"><i class="fa-solid fa-lock"></i> Contraseña</label>
+        <input id="loginPassword" type="password" placeholder="Ingresa tu contraseña" autocomplete="current-password" required>
+      </div>
+      <button class="login-submit" type="submit"><i class="fa-solid fa-right-to-bracket"></i> ENTRAR</button>
+      <p class="login-error" id="loginError" role="alert"></p>
+      <div class="login-demo">Acceso de prueba: <b>admin</b> / <b>levelup123</b></div>
+    </form>
+  </section>
+
 
   <!-- HEADER -->
   <header class="header">
@@ -1091,7 +1146,7 @@
           const $jugador = $('<strong>').css('color', 'var(--neon-blue)').text(res.jugador + ' — ');
           const extraTexto = [res.snack, res.combo].filter(x => x && !x.startsWith('Sin')).join(' + ');
           const resumenAlimentos = extraTexto ? ` [${extraTexto}]` : '';
-          const $detalle = $('<span>').text(`${res.estacion} (${res.detalle}) • ${res.horas}h${resresumenAlimentos} • ${res.total} BOB`);
+          const $detalle = $('<span>').text(`${res.estacion} (${res.detalle}) • ${res.horas}h${resumenAlimentos} • ${res.total} BOB`);
           $info.append($jugador, $detalle);
 
           const $badge = $('<span>').addClass('historial-item__badge').text(res.estado);
@@ -1214,7 +1269,7 @@
             nombre: 'Bebida / Energética',
             descripcion: 'Una bebida fría o energética para mantenerte activo durante tus partidas.',
             precio: '8 BOB',
-            imagen: 'https://i.pinimg.com/736x/bc/c2/f5/bcc2f5b5d74cf280c3396aa16213975e.jpg'
+            imagen: 'https://images.unsplash.com/photo-1532634896-26909d0d4b8b?q=80&w=700&auto=format&fit=crop'
           },
           'Palomitas Mantequilla': {
             nombre: 'Palomitas con Mantequilla',
@@ -1548,5 +1603,50 @@
       calcularTotal();
     });
   </script>
+
+  <script>
+    // Acceso local de demostración. Para producción debe validarse desde un servidor.
+    (function () {
+      const pantalla = document.getElementById('loginScreen');
+      const formulario = document.getElementById('loginForm');
+      const error = document.getElementById('loginError');
+      const usuarioValido = 'admin';
+      const claveValida = 'levelup123';
+
+      function mostrarPagina() {
+        if (pantalla) pantalla.style.display = 'none';
+        if (!document.getElementById('btnCerrarSesion')) {
+          const salir = document.createElement('button');
+          salir.id = 'btnCerrarSesion';
+          salir.className = 'logout-button';
+          salir.type = 'button';
+          salir.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Cerrar sesión';
+          salir.addEventListener('click', function () {
+            sessionStorage.removeItem('levelupSesion');
+            if (pantalla) pantalla.style.display = 'flex';
+            document.getElementById('loginPassword').value = '';
+            error.textContent = '';
+            salir.remove();
+          });
+          document.body.appendChild(salir);
+        }
+      }
+
+      if (sessionStorage.getItem('levelupSesion') === 'activa') mostrarPagina();
+      formulario.addEventListener('submit', function (e) {
+        e.preventDefault();
+        const usuario = document.getElementById('loginUser').value.trim();
+        const clave = document.getElementById('loginPassword').value;
+        if (usuario === usuarioValido && clave === claveValida) {
+          sessionStorage.setItem('levelupSesion', 'activa');
+          error.textContent = '';
+          mostrarPagina();
+        } else {
+          error.textContent = 'Usuario o contraseña incorrectos.';
+        }
+      });
+    })();
+  </script>
+
 </body>
 </html>
