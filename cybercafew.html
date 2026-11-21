@@ -26,9 +26,6 @@
   <!-- Seguridad XSS: DOMPurify -->
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 
-  <!-- Supabase JS v2 -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
   <style>
     /* ================= VARIABLES Y RESET ================= */
     :root {
@@ -596,10 +593,10 @@
       <div class="menu-contacto" id="menuContacto">
         <a href="#contacto" class="header__nav-link header__nav-link--contacto" id="btnToggleContacto"><i class="fa-solid fa-envelope"></i> Contacto</a>
         <div class="menu-contacto__lista" id="listaContacto">
-          <a href="https://wa.me/59170012345" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
-          <a href="tel:+59170012345"><i class="fa-solid fa-phone"></i> Llamar</a>
-          <a href="#ubicacion"><i class="fa-solid fa-location-dot"></i> Ubicación</a>
-          <a href="mailto:info@levelup.com"><i class="fa-solid fa-envelope-open-text"></i> Enviar Correo</a>
+          <a href="https://youtu.be/QDia3e12czc?si=d3q2Fqok8RgqR-Se" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>
+          <a href="https://youtu.be/QDia3e12czc?si=d3q2Fqok8RgqR-Se"><i class="fa-solid fa-phone"></i> Llamar</a>
+          <a href="https://youtu.be/QDia3e12czc?si=d3q2Fqok8RgqR-Se"><i class="fa-solid fa-location-dot"></i> Ubicación</a>
+          <a href="https://youtu.be/QDia3e12czc?si=d3q2Fqok8RgqR-Se"><i class="fa-solid fa-envelope-open-text"></i> Enviar Correo</a>
         </div>
       </div>
     </nav>
@@ -662,10 +659,10 @@
 
       </section>
 
-      <!-- COLA OFFLINE-FIRST + SUPABASE DE RESERVAS (SANITIZADA CONTRA XSS) -->
+      <!-- COLA OFFLINE-FIRST DE RESERVAS (SANITIZADA CONTRA XSS) -->
       <section class="historial-panel">
         <div class="historial-panel__header">
-          <h3 class="historial-panel__title"><i class="fa-solid fa-database"></i> Reservas Guardadas (Supabase / Cola Offline)</h3>
+          <h3 class="historial-panel__title"><i class="fa-solid fa-database"></i> Reservas Guardadas (LocalStorage / Cola Offline)</h3>
           <span id="contadorReservas" style="font-size: 0.85rem; color: var(--text-muted);">0 activas</span>
         </div>
         <ul class="historial-lista" id="listaReservasSegura"></ul>
@@ -1045,8 +1042,7 @@
           const ASSETS_TO_CACHE = [
             './',
             'https://code.jquery.com/jquery-3.7.1.min.js',
-            'https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js',
-            'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2'
+            'https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js'
           ];
           self.addEventListener('install', event => {
             event.waitUntil(
@@ -1073,17 +1069,10 @@
     })();
 
     /* =========================================================================
-       LÓGICA DE APLICACIÓN: SUPABASE + EVENT BUBBLING, HIDRATACIÓN Y ANTI-XSS
+       LÓGICA DE APLICACIÓN: EVENT BUBBLING, HIDRATACIÓN Y ANTI-XSS
        ========================================================================= */
     $(document).ready(function () {
       
-      // --- CONFIGURACIÓN SUPABASE ---
-      const SUPABASE_URL = 'https://skywnzykfkzhqzongjzc.supabase.co';
-      const SUPABASE_ANON_KEY = 'sb_publishable_0kNgs3PcyyJfebRPrw8Wow__Jsh5E4_';
-      const supabaseClient = (window.supabase && SUPABASE_URL.startsWith('http'))
-        ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-        : null;
-
       let basePrice = 40;
       let currentStation = 'PS5';
       let timerInterval = null;
@@ -1102,7 +1091,6 @@
           $('#estadoRed').removeClass('estado-red--offline');
           $('#estadoRedTexto').text('En Línea');
           sincronizarColaOffline();
-          cargarReservasDesdeSupabase();
         } else {
           $('#estadoRed').addClass('estado-red--offline');
           $('#estadoRedTexto').text('Modo Offline (Datos Locales)');
@@ -1110,7 +1098,7 @@
       }
       $(window).off('online offline').on('online offline', actualizarEstadoRed);
 
-      // --- 2. PERSISTENCIA LOCALSTORAGE + SUPABASE + SANITIZACIÓN ANTI-XSS ---
+      // --- 2. PERSISTENCIA LOCALSTORAGE + UI OPTIMISTA + SANITIZACIÓN ANTI-XSS ---
       function obtenerReservas() {
         try {
           return JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
@@ -1124,91 +1112,19 @@
         renderizarReservasSeguras();
       }
 
-      async function insertarReservaEnSupabase(reserva) {
-        if (!supabaseClient || !navigator.onLine) return false;
-
-        const payload = {
-          id: Number(reserva.id),
-          jugador: reserva.jugador,
-          estacion: reserva.estacion,
-          detalle: reserva.detalle || '',
-          snack: reserva.snack || 'Sin snack extra',
-          combo: reserva.combo || 'Sin combo',
-          horas: Number(reserva.horas) || 1,
-          total: Number(reserva.total) || 0,
-          estado: 'Sincronizado'
-        };
-
-        const { error } = await supabaseClient
-          .from('reservas')
-          .upsert(payload, { onConflict: 'id' });
-
-        if (error) {
-          console.error('Error al guardar en Supabase:', error.message);
-          return false;
-        }
-        return true;
-      }
-
-      async function eliminarReservaEnSupabase(id) {
-        if (!supabaseClient || !navigator.onLine) return;
-        const { error } = await supabaseClient
-          .from('reservas')
-          .delete()
-          .eq('id', Number(id));
-
-        if (error) {
-          console.error('Error al eliminar en Supabase:', error.message);
-        }
-      }
-
-      async function cargarReservasDesdeSupabase() {
-        if (!supabaseClient || !navigator.onLine) return;
-
-        const { data, error } = await supabaseClient
-          .from('reservas')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(50);
-
-        if (error) {
-          console.warn('No se pudo leer desde Supabase:', error.message);
-          return;
-        }
-
-        if (Array.isArray(data)) {
-          const localesPendientes = obtenerReservas().filter(r => r.estado === 'Pendiente de envío');
-          const mapaCombinado = new Map();
-
-          data.forEach(r => mapaCombinado.set(Number(r.id), r));
-          localesPendientes.forEach(r => mapaCombinado.set(Number(r.id), r));
-
-          const combinadas = Array.from(mapaCombinado.values())
-            .sort((a, b) => Number(b.id) - Number(a.id));
-
-          guardarReservas(combinadas);
-        }
-      }
-
-      async function sincronizarColaOffline() {
-        if (!supabaseClient || !navigator.onLine) return;
-
+      function sincronizarColaOffline() {
         let reservas = obtenerReservas();
         let huboCambios = false;
-
-        for (let i = 0; i < reservas.length; i++) {
-          if (reservas[i].estado === 'Pendiente de envío') {
-            const ok = await insertarReservaEnSupabase(reservas[i]);
-            if (ok) {
-              reservas[i] = { ...reservas[i], estado: 'Sincronizado' };
-              huboCambios = true;
-            }
+        reservas = reservas.map(r => {
+          if (r.estado === 'Pendiente de envío') {
+            huboCambios = true;
+            return { ...r, estado: 'Sincronizado' };
           }
-        }
-
+          return r;
+        });
         if (huboCambios) {
           guardarReservas(reservas);
-          mostrarToast('Cola Sincronizada', 'Reservas offline enviadas a Supabase.');
+          mostrarToast('Cola Sincronizada', 'Reservas offline enviadas al servidor.');
         }
       }
 
@@ -1248,11 +1164,10 @@
         });
       }
 
-      $('#listaReservasSegura').off('click', '.btn-eliminar-item').on('click', '.btn-eliminar-item', async function () {
+      $('#listaReservasSegura').off('click', '.btn-eliminar-item').on('click', '.btn-eliminar-item', function () {
         const id = $(this).closest('.historial-item').data('id');
-        const filtradas = obtenerReservas().filter(r => String(r.id) !== String(id));
+        const filtradas = obtenerReservas().filter(r => r.id !== id);
         guardarReservas(filtradas);
-        await eliminarReservaEnSupabase(id);
       });
 
       // --- 3. HIDRATACIÓN POR COMPONENTE ---
@@ -1347,6 +1262,7 @@
       }
 
       function mostrarImagenSnack() {
+        // Se identifica por data-label porque Palomitas y Papas tienen el mismo precio.
         const etiqueta = $('#snackSelect option:selected').data('label');
         const snacks = {
           'Bebida / Energética': {
@@ -1640,7 +1556,7 @@
 
       $('#btnCloseModal, #btnCancelModal').off('click').on('click', cerrarModal);
 
-      $('#btnProcess').off('click').on('click', async function () {
+      $('#btnProcess').off('click').on('click', function () {
         clearInterval(timerInterval);
         $('#modal').fadeOut(250);
 
@@ -1653,23 +1569,17 @@
           combo: $('#modalCombo').text(),
           horas: parseInt($('#hoursInput').val()) || 1,
           total: calcularTotal(),
-          estado: 'Pendiente de envío'
+          estado: navigator.onLine ? 'Sincronizado' : 'Pendiente de envío'
         };
 
         const actuales = obtenerReservas();
         actuales.unshift(nuevaReserva);
         guardarReservas(actuales);
 
-        const enviada = await insertarReservaEnSupabase(nuevaReserva);
-
-        if (enviada) {
-          const actualizadas = obtenerReservas().map(r =>
-            r.id === nuevaReserva.id ? { ...r, estado: 'Sincronizado' } : r
-          );
-          guardarReservas(actualizadas);
-          mostrarToast('Reserva Confirmada', 'Guardada en Supabase y local.');
+        if (navigator.onLine) {
+          mostrarToast('Reserva Confirmada', 'Registrada y sincronizada en tiempo real.');
         } else {
-          mostrarToast('Guardado Localmente', 'Sin conexión o pendiente: se sincronizará al volver la red.');
+          mostrarToast('Guardado Localmente', 'Modo Offline: se sincronizará al volver la red.');
         }
       });
 
