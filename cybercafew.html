@@ -379,6 +379,47 @@
       border: 1px solid rgba(255, 204, 0, 0.3); padding: 6px 10px; border-radius: 8px;
     }
 
+    .combo-preview {
+      display: none;
+      margin-top: 10px;
+      padding: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--neon-purple);
+      border-radius: 12px;
+      text-align: center;
+      animation: comboAparecer 0.35s ease;
+    }
+    .combo-preview img {
+      display: block;
+      width: 100%;
+      max-height: 190px;
+      object-fit: cover;
+      border-radius: 9px;
+      border: 1px solid var(--neon-blue);
+      margin-bottom: 10px;
+    }
+    .combo-preview h4 {
+      color: var(--neon-purple);
+      font-family: var(--font-title);
+      font-size: 0.9rem;
+      margin-bottom: 5px;
+    }
+    .combo-preview p {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 7px;
+    }
+    .combo-preview__precio {
+      color: var(--neon-green);
+      font-family: var(--font-title);
+      font-weight: 800;
+    }
+    @keyframes comboAparecer {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+
     .hours-control { display: flex; align-items: center; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; }
     .hours-control button { background: transparent; border: none; color: #fff; font-size: 1.1rem; cursor: pointer; transition: background 0.3s; min-width: 44px; min-height: 44px; }
     .hours-control button:hover { background: rgba(255,255,255,0.1); }
@@ -597,6 +638,12 @@
             <option value="12" data-label="Nachos con Queso">Nachos con Queso (+12 BOB)</option>
             <option value="18" data-label="Alitas Picantes (6u)">Alitas Picantes 6u (+18 BOB)</option>
           </select>
+          <div class="combo-preview snack-preview" id="snackPreview" aria-live="polite">
+            <img id="snackImagen" src="" alt="Imagen del snack seleccionado" loading="lazy">
+            <h4 id="snackNombre"></h4>
+            <p id="snackDescripcion"></p>
+            <div class="combo-preview__precio" id="snackPrecio"></div>
+          </div>
         </div>
 
         <div class="form-group">
@@ -610,6 +657,12 @@
           </select>
           <div class="combo-sugerencia" id="comboRecomendado">
             ★ Ideal para PS5: Combo Dúo / Squad o Combo Gamer Clásico
+          </div>
+          <div class="combo-preview" id="comboPreview" aria-live="polite">
+            <img id="comboImagen" src="" alt="Imagen del combo seleccionado" loading="lazy">
+            <h4 id="comboNombre"></h4>
+            <p id="comboDescripcion"></p>
+            <div class="combo-preview__precio" id="comboPrecio"></div>
           </div>
         </div>
 
@@ -1124,11 +1177,17 @@
         });
 
         hidratarElemento($('#snackSelect'), null, function ($b) {
-          $b.off('change').on('change', calcularTotal);
+          $b.off('change').on('change', function () {
+            mostrarImagenSnack();
+            calcularTotal();
+          });
         });
 
         hidratarElemento($('#comboSelect'), null, function ($b) {
-          $b.off('change').on('change', calcularTotal);
+          $b.off('change').on('change', function () {
+            mostrarImagenCombo();
+            calcularTotal();
+          });
         });
 
         hidratarElemento($('#btnConfirm'), 'btn-confirm--hydrated', function ($b) {
@@ -1145,6 +1204,103 @@
         if (currentStation === 'ARCADE') currentStation = 'Arcade';
         actualizarSugerenciaCombo(currentStation);
         calcularTotal();
+      }
+
+      function mostrarImagenSnack() {
+        // Se identifica por data-label porque Palomitas y Papas tienen el mismo precio.
+        const etiqueta = $('#snackSelect option:selected').data('label');
+        const snacks = {
+          'Bebida / Energética': {
+            nombre: 'Bebida / Energética',
+            descripcion: 'Una bebida fría o energética para mantenerte activo durante tus partidas.',
+            precio: '8 BOB',
+            imagen: 'https://i.pinimg.com/736x/bc/c2/f5/bcc2f5b5d74cf280c3396aa16213975e.jpg'
+          },
+          'Palomitas Mantequilla': {
+            nombre: 'Palomitas con Mantequilla',
+            descripcion: 'Palomitas crujientes con sabor a mantequilla, ideales para disfrutar jugando.',
+            precio: '10 BOB',
+            imagen: 'https://images.unsplash.com/photo-1578849278619-e73505e9610f?q=80&w=700&auto=format&fit=crop'
+          },
+          'Papas Fritas': {
+            nombre: 'Papas Fritas',
+            descripcion: 'Papas doradas y crujientes para acompañar tu sesión de juego.',
+            precio: '10 BOB',
+            imagen: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?q=80&w=700&auto=format&fit=crop'
+          },
+          'Nachos con Queso': {
+            nombre: 'Nachos con Queso',
+            descripcion: 'Nachos crujientes acompañados de una deliciosa salsa de queso.',
+            precio: '12 BOB',
+            imagen: 'https://images.unsplash.com/photo-1513456852971-30c0b8199d4d?q=80&w=700&auto=format&fit=crop'
+          },
+          'Alitas Picantes (6u)': {
+            nombre: 'Alitas Picantes (6 unidades)',
+            descripcion: 'Seis alitas con salsa picante para darle sabor a tus partidas.',
+            precio: '18 BOB',
+            imagen: 'https://images.unsplash.com/photo-1527477396000-e27163b481c2?q=80&w=700&auto=format&fit=crop'
+          }
+        };
+
+        const snack = snacks[etiqueta];
+        const $preview = $('#snackPreview');
+
+        if (!snack) {
+          $preview.stop(true, true).slideUp(180);
+          $('#snackImagen').attr('src', '');
+          return;
+        }
+
+        $('#snackImagen').attr('src', snack.imagen).attr('alt', snack.nombre);
+        $('#snackNombre').text(snack.nombre);
+        $('#snackDescripcion').text(snack.descripcion);
+        $('#snackPrecio').text(snack.precio);
+        $preview.stop(true, true).slideDown(220);
+      }
+
+      function mostrarImagenCombo() {
+        const combos = {
+          '15': {
+            nombre: 'Combo Gamer Clásico',
+            descripcion: 'Papas fritas y gaseosa para acompañar tus partidas.',
+            precio: '15 BOB',
+            imagen: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?q=80&w=700&auto=format&fit=crop'
+          },
+          '20': {
+            nombre: 'Combo Retro Arcade',
+            descripcion: 'Nachos y dos bebidas para disfrutar tus juegos retro.',
+            precio: '20 BOB',
+            imagen: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?q=80&w=700&auto=format&fit=crop'
+          },
+          '28': {
+            nombre: 'Combo Dúo / Squad',
+            descripcion: 'Alitas, nachos y dos bebidas para compartir con tus amigos.',
+            precio: '28 BOB',
+            imagen: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?q=80&w=700&auto=format&fit=crop'
+          },
+          '35': {
+            nombre: 'Combo Pro Tournament',
+            descripcion: 'Alitas, papas, palomitas y dos bebidas energéticas.',
+            precio: '35 BOB',
+            imagen: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=700&auto=format&fit=crop'
+          }
+        };
+
+        const valor = $('#comboSelect').val();
+        const combo = combos[valor];
+        const $preview = $('#comboPreview');
+
+        if (!combo) {
+          $preview.stop(true, true).slideUp(180);
+          $('#comboImagen').attr('src', '');
+          return;
+        }
+
+        $('#comboImagen').attr('src', combo.imagen).attr('alt', combo.nombre);
+        $('#comboNombre').text(combo.nombre);
+        $('#comboDescripcion').text(combo.descripcion);
+        $('#comboPrecio').text(combo.precio);
+        $preview.stop(true, true).slideDown(220);
       }
 
       function actualizarSugerenciaCombo(station) {
@@ -1388,6 +1544,7 @@
       renderizarReservasSeguras();
       actualizarSugerenciaCombo('PS5');
       updateBannerText('PS5');
+      mostrarImagenCombo();
       calcularTotal();
     });
   </script>
